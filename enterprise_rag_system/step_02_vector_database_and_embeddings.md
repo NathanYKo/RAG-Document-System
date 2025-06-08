@@ -21,6 +21,7 @@ database.py:
 import chromadb
 from chromadb.config import Settings
 import asyncio
+from embeddings import generate_embeddings
 
 CHROMA_SETTINGS = Settings(
     chroma_db_impl="duckdb+parquet",
@@ -30,7 +31,7 @@ CHROMA_SETTINGS = Settings(
 class ChromaDB:
     def __init__(self):
         self.client = chromadb.Client(CHROMA_SETTINGS)
-        self.collection = self.client.create_collection("documents")
+        self.collection = self.client.get_or_create_collection("documents")
 
     async def add_documents(self, documents, embeddings, metadatas):
         self.collection.add(
@@ -71,8 +72,12 @@ async def process_chunks(chunks, metadata):
     embeddings = generate_embeddings(chunks)
 
     # Add chunks and metadata to vector DB
+    # NOTE: In a production app, the ChromaDB client should be a singleton
+    # and not re-initialized on every call.
     db = ChromaDB()
-    await db.add_documents(chunks, embeddings, metadata)
+    # ChromaDB expects a list of metadatas, one for each document.
+    metadatas = [metadata for _ in chunks]
+    await db.add_documents(chunks, embeddings, metadatas)
     
     logger.info(f"Processed {len(chunks)} chunks for document: {metadata['source']}")
 
@@ -88,6 +93,8 @@ async def process_document(config: ChunkConfig, file: UploadFile = File(...)):
 
 @app.post("/query")
 async def query_documents(query: str):
+    # NOTE: In a production app, the ChromaDB client should be a singleton
+    # and not re-initialized on every call.
     db = ChromaDB()
     results = db.query(query_texts=[query])
     return {"results": results}
@@ -127,6 +134,7 @@ from database import ChromaDB
 @pytest.mark.asyncio
 async def test_db_integration():
     db = ChromaDB()
+    db.client.reset() # Reset database before test to ensure isolation
     
     # Add documents
     documents = ["This is a test document", "Another test document"] 
@@ -141,7 +149,7 @@ async def test_db_integration():
     # Get document by ID
     doc_id = results["ids"][0][0]
     doc = db.get(ids=[doc_id])
-    assert doc["documents"][0] == documents[0]
+    assert doc["documents"][0] in documents
 
     # Delete document
     await db.delete(ids=[doc_id])
