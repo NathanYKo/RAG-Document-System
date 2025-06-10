@@ -13,7 +13,7 @@ try:
 except ImportError:
     # Fallback to simple embeddings for testing
     from embeddings_simple import generate_embeddings 
-from database import ChromaDB
+from vector_database import ChromaDB
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

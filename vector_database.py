@@ -47,7 +47,7 @@ class ChromaDB:
             List of document IDs
         """
         try:
-            if not documents or not embeddings or not metadatas:
+            if not documents or len(embeddings) == 0 or not metadatas:
                 raise ValueError("Documents, embeddings, and metadatas must not be empty")
                 
             if len(documents) != len(embeddings) or len(documents) != len(metadatas):
@@ -104,7 +104,7 @@ class ChromaDB:
             if isinstance(query_texts, str):
                 query_texts = [query_texts]
             
-            if not query_texts:
+            if not query_texts or len(query_texts) == 0:
                 raise ValueError("Query texts must not be empty")
             
             query_embeddings = generate_embeddings(query_texts)
