@@ -99,21 +99,21 @@ app.add_middleware(
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=ValidationErrorResponse(
-            detail=exc.errors(),
-            timestamp=datetime.utcnow()
-        ).dict()
+        content={
+            "detail": exc.errors(),
+            "timestamp": datetime.utcnow().isoformat()
+        }
     )
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content=ErrorResponse(
-            detail=exc.detail,
-            error_code=getattr(exc, 'error_code', None),
-            timestamp=datetime.utcnow()
-        ).dict()
+        content={
+            "detail": exc.detail,
+            "error_code": getattr(exc, 'error_code', None),
+            "timestamp": datetime.utcnow().isoformat()
+        }
     )
 
 
@@ -140,7 +140,7 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/health",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 # Authentication endpoints

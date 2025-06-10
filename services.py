@@ -9,6 +9,7 @@ from datetime import datetime
 
 from schemas import DocumentCreate, QueryRequest
 from rag import rag_system, RAGResponse
+import document_processor as doc_proc
 
 logger = logging.getLogger(__name__)
 
@@ -17,80 +18,66 @@ DOCUMENT_PROCESSOR_URL = "http://localhost:8002"
 RAG_SYSTEM_URL = "http://localhost:8001"
 
 class DocumentProcessorService:
-    """Service for communicating with the document processor"""
+    """Service for processing documents using the local document processor"""
     
-    @staticmethod
     async def process_document(
+        self,
         file: UploadFile,
         chunk_size: int = 1000,
         chunk_overlap: int = 200
     ) -> DocumentCreate:
-        """Process document using the document processor service"""
+        """Process document using the local document processor"""
         try:
-            # Prepare file for upload
+            # Read file content
             file_content = await file.read()
+            await file.seek(0)  # Reset file position
             
-            # Reset file position for potential reuse
-            await file.seek(0)
-            
-            files = {
-                "file": (file.filename, BytesIO(file_content), file.content_type)
-            }
-            data = {
-                "chunk_size": chunk_size,
-                "chunk_overlap": chunk_overlap
-            }
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    f"{DOCUMENT_PROCESSOR_URL}/process_document",
-                    files=files,
-                    data=data
+            # Process based on file type
+            if file.filename.lower().endswith(".pdf"):
+                text = doc_proc.process_pdf(file_content)
+            elif file.filename.lower().endswith(".docx"):
+                text = doc_proc.process_docx(file_content)
+            elif file.filename.lower().endswith(".txt"):
+                text = doc_proc.process_txt(file_content)
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported file type: {file.filename}. Supported types: PDF, DOCX, TXT"
                 )
-                
-                if response.status_code != 200:
-                    logger.error(f"Document processing failed: {response.text}")
-                    raise HTTPException(
-                        status_code=response.status_code,
-                        detail=f"Document processing failed: {response.text}"
-                    )
-                
-                result = response.json()
-                
-                # Transform the response to match our DocumentCreate schema
-                return DocumentCreate(
-                    filename=result["filename"],
-                    original_filename=file.filename,
-                    file_type=result["filename"].split('.')[-1].lower(),
-                    file_size=len(file_content),
-                    total_chunks=result["total_chunks"],
-                    chunk_size=result["chunk_size"],
-                    chunk_overlap=result["chunk_overlap"],
-                    chunk_ids=result["chunk_ids"],
-                    doc_metadata={
-                        "original_text_length": result.get("original_text_length"),
-                        "cleaned_text_length": result.get("cleaned_text_length"),
-                        "processing_timestamp": datetime.utcnow().isoformat()
-                    }
-                )
-                
-        except httpx.TimeoutException:
-            logger.error("Document processing timeout")
-            raise HTTPException(
-                status_code=408,
-                detail="Document processing timeout"
+
+            # Clean and chunk text
+            config = doc_proc.ChunkConfig(size=chunk_size, overlap=chunk_overlap)
+            cleaned_text = doc_proc.clean_text(text)
+            chunks = doc_proc.create_chunks(cleaned_text, config)
+
+            # Process chunks and store in vector database
+            metadata = {"source": file.filename, "file_type": file.filename.split('.')[-1].lower()}
+            chunk_ids = await doc_proc.process_chunks(chunks, metadata)
+            
+            # Transform the response to match our DocumentCreate schema
+            return DocumentCreate(
+                filename=file.filename,
+                original_filename=file.filename,
+                file_type=file.filename.split('.')[-1].lower(),
+                file_size=len(file_content),
+                total_chunks=len(chunks),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                chunk_ids=chunk_ids,
+                doc_metadata={
+                    "original_text_length": len(text),
+                    "cleaned_text_length": len(cleaned_text),
+                    "processing_timestamp": datetime.utcnow().isoformat()
+                }
             )
-        except httpx.HTTPError as e:
-            logger.error(f"HTTP error during document processing: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Document processing service unavailable"
-            )
+                
+        except HTTPException:
+            raise
         except Exception as e:
-            logger.error(f"Unexpected error in document processing: {e}")
+            logger.error(f"Document processing failed: {e}")
             raise HTTPException(
                 status_code=500,
-                detail="Document processing failed"
+                detail=f"Document processing failed: {str(e)}"
             )
 
 class RAGService:
