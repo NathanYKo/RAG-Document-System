@@ -1,0 +1,2 @@
+DEBUG:Chroma:Logger created
+ERROR:database:Error initializing ChromaDB: 'LocalAPI' object has no attribute 'get_or_create_collection'

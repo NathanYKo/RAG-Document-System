@@ -1,5 +1,4 @@
 import chromadb
-from chromadb.config import Settings
 import asyncio
 import logging
 import uuid
@@ -13,11 +12,6 @@ except ImportError:
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-CHROMA_SETTINGS = Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory="./db"
-)
-
 class ChromaDB:
     def __init__(self):
         try:
@@ -25,7 +19,8 @@ class ChromaDB:
             import os
             os.makedirs("./db", exist_ok=True)
             
-            self.client = chromadb.Client(CHROMA_SETTINGS)
+            # Use the new ChromaDB API
+            self.client = chromadb.PersistentClient(path="./db")
             self.collection = self.client.get_or_create_collection("documents")
             logger.info("ChromaDB initialized successfully")
         except Exception as e:
@@ -64,6 +59,9 @@ class ChromaDB:
             # Convert embeddings to list if it's a numpy array
             if hasattr(embeddings, 'tolist'):
                 embeddings = embeddings.tolist()
+            elif hasattr(embeddings, 'shape'):
+                # Handle numpy arrays properly
+                embeddings = [embedding.tolist() if hasattr(embedding, 'tolist') else embedding for embedding in embeddings]
             
             self.collection.add(
                 documents=documents,
@@ -79,10 +77,10 @@ class ChromaDB:
             raise RuntimeError(f"Failed to add documents: {str(e)}")
 
     async def persist(self) -> None:
-        """Persist the database to disk"""
+        """Persist the database to disk - automatic with PersistentClient"""
         try:
-            await asyncio.to_thread(self.client.persist)
-            logger.debug("ChromaDB persisted successfully")
+            # PersistentClient automatically persists changes
+            logger.debug("ChromaDB persisted successfully (automatic)")
         except Exception as e:
             logger.error(f"Error persisting ChromaDB: {str(e)}")
             raise RuntimeError(f"Failed to persist database: {str(e)}")
@@ -114,6 +112,9 @@ class ChromaDB:
             # Convert embeddings to list if it's a numpy array
             if hasattr(query_embeddings, 'tolist'):
                 query_embeddings = query_embeddings.tolist()
+            elif hasattr(query_embeddings, 'shape'):
+                # Handle numpy arrays properly
+                query_embeddings = [embedding.tolist() if hasattr(embedding, 'tolist') else embedding for embedding in query_embeddings]
             
             results = self.collection.query(
                 query_embeddings=query_embeddings, 
