@@ -30,7 +30,8 @@ WORKDIR /app
 COPY --from=backend-builder /app/backend /app/backend
 COPY --from=frontend-builder /app/frontend /app/frontend
 
-# Install all Python dependencies
+# Install all Python dependencies with better resolution
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r backend/requirements.txt
 RUN pip install --no-cache-dir -r frontend/requirements.txt
 
