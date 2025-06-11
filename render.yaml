@@ -8,13 +8,14 @@ services:
       - name: enterprise_rag
         user: rag_user
 
-  # Backend + Frontend Web Service
+  # Lightweight Backend API Service (Memory Optimized)
   - type: web
     name: enterprise-rag-system
     env: docker
     plan: free
+    dockerfilePath: ./Dockerfile.lite
     buildCommand: ""
-    startCommand: "/app/start-services.sh"
+    startCommand: "./start-services.sh"
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -34,6 +35,12 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://*.onrender.com,http://localhost:3000,http://localhost:8000
       - key: PORT
-        value: 10000  # Render uses port 10000
-      - key: STREAMLIT_PORT
-        value: 8501 
+        value: 10000
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: PYTORCH_CUDA_ALLOC_CONF
+        value: max_split_size_mb:128
+      - key: TOKENIZERS_PARALLELISM
+        value: false
+      - key: OMP_NUM_THREADS
+        value: 1 

@@ -1,0 +1,40 @@
+# Lightweight Dockerfile for Render (512MB memory limit)
+FROM python:3.9-slim as builder
+
+# Install only essential system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    g++ \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy backend only (no Streamlit frontend to save memory)
+COPY backend/ ./backend/
+COPY backend/requirements-lite.txt ./backend/requirements.txt
+
+# Install Python dependencies with memory optimizations
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Copy optimized startup script
+COPY start-services-lite.sh ./start-services.sh
+RUN chmod +x ./start-services.sh
+
+# Expose port for Render
+EXPOSE 10000
+
+# Set memory optimization environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+ENV TOKENIZERS_PARALLELISM=false
+ENV OMP_NUM_THREADS=1
+
+# Health check with longer timeout
+HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=3 \
+  CMD curl -f http://localhost:10000/health || exit 1
+
+# Start lightweight service
+CMD ["./start-services.sh"] 
