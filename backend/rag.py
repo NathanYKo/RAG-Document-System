@@ -189,8 +189,7 @@ class EnhancedRAGSystem:
         # Content quality filtering
         filtered_chunks = [
             chunk for chunk in filtered_chunks
-            if len(chunk.content.strip()) > 50 and  # Minimum content length
-            not chunk.content.lower().startswith(('error', 'warning', 'debug'))  # Filter system messages
+            if len(chunk.content.strip()) >= 10 and  not chunk.content.lower().startswith(('error', 'warning', 'debug'))
         ]
         
         # Apply user-specified filters

@@ -16,6 +16,9 @@ import logging
 import asyncio
 import time
 import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models import Base
 
 # Import all our modules
 from sql_database import get_database, create_tables, get_db_info, Base, engine
@@ -38,7 +41,30 @@ import crud
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create database tables
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./enterprise_rag.db")
+
+# Initialize database
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def create_tables():
+    """Create database tables if they don't exist"""
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error creating tables: {e}")
+
+def get_db():
+    """Database dependency"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Initialize database on startup
 create_tables()
 
 @asynccontextmanager
@@ -235,7 +261,6 @@ async def upload_document(
     file: UploadFile = File(...),
     chunk_size: int = Form(1000),
     chunk_overlap: int = Form(200),
-    auth_data: dict = Depends(require_upload_permission),
     db: Session = Depends(get_database)
 ):
     """Upload and process a document"""
@@ -253,8 +278,8 @@ async def upload_document(
             file, chunk_size, chunk_overlap
         )
         
-        # Save to database
-        document = crud.create_document(db, document_data, auth_data["user"].id)
+        # Save to database (using user_id = 1 for testing)
+        document = crud.create_document(db, document_data, 1)
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -283,11 +308,10 @@ async def upload_document(
 async def list_documents(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_database)
 ):
-    """List user's documents"""
-    documents = crud.get_documents_by_owner(db, current_user.id, skip=skip, limit=limit)
+    """List all documents (testing without auth)"""
+    documents = crud.get_documents_by_owner(db, 1, skip=skip, limit=limit)
     return [
         DocumentSummary(
             id=doc.id,
@@ -364,7 +388,6 @@ async def delete_document(
 async def process_query(
     query_request: QueryRequest,
     request: Request,
-    auth_data: dict = Depends(require_query_permission),
     db: Session = Depends(get_database)
 ):
     """Process a query against the document knowledge base"""
@@ -376,10 +399,10 @@ async def process_query(
         processing_time = time.time() - start_time
         result["processing_time"] = processing_time
         
-        # Log the query
+        # Log the query (using user_id = 1 for testing)
         query_log = crud.create_query_log(
             db=db,
-            user_id=auth_data["user"].id,
+            user_id=1,
             query_text=query_request.query,
             response_text=result["answer"],
             confidence_score=result["confidence_score"],
@@ -405,10 +428,10 @@ async def process_query(
         processing_time = time.time() - start_time
         logger.error(f"Query processing failed: {e}")
         
-        # Log the failed query
+        # Log the failed query (using user_id = 1 for testing)
         crud.create_query_log(
             db=db,
-            user_id=auth_data["user"].id,
+            user_id=1,
             query_text=query_request.query,
             processing_time=processing_time,
             status="failed",

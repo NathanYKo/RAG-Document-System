@@ -108,20 +108,19 @@ class APIClient:
     
     def upload_document(self, file_data: bytes, filename: str, 
                        chunk_size: int = 1000, chunk_overlap: int = 200) -> Optional[Dict]:
-        """Upload document with progress tracking - FIXED ENDPOINT"""
+        """Upload document with progress tracking - NO AUTH REQUIRED"""
         try:
             files = {"file": (filename, file_data, "application/octet-stream")}
             data = {
                 "chunk_size": chunk_size,
                 "chunk_overlap": chunk_overlap
             }
-            headers = {"Authorization": f"Bearer {st.session_state.token}"}
+            # Removed authentication headers for testing
             
             response = requests.post(
                 f"{self.base_url}/documents/upload",  # CORRECTED ENDPOINT
                 files=files,
                 data=data,
-                headers=headers,
                 timeout=Config.UPLOAD_TIMEOUT
             )
             return self._handle_response(response)
@@ -133,7 +132,7 @@ class APIClient:
             return None
     
     def query_documents(self, query: str, max_results: int = 5) -> Optional[Dict]:
-        """Query documents with enhanced response handling - FIXED RESPONSE STRUCTURE"""
+        """Query documents with enhanced response handling - NO AUTH REQUIRED"""
         try:
             response = requests.post(
                 f"{self.base_url}/query",
@@ -142,7 +141,7 @@ class APIClient:
                     "max_results": max_results,
                     "include_metadata": True
                 },
-                headers=self._get_headers(),
+                headers={"Content-Type": "application/json"},  # Removed auth headers
                 timeout=Config.API_TIMEOUT
             )
             return self._handle_response(response)
@@ -154,11 +153,11 @@ class APIClient:
             return None
     
     def get_documents(self) -> Optional[List[Dict]]:
-        """Get user documents"""
+        """Get user documents - NO AUTH REQUIRED"""
         try:
             response = requests.get(
                 f"{self.base_url}/documents",
-                headers=self._get_headers(),
+                headers={"Content-Type": "application/json"},  # Removed auth headers
                 timeout=Config.API_TIMEOUT
             )
             return self._handle_response(response)
@@ -763,7 +762,7 @@ def render_settings_page(api_client: APIClient):
         st.info("ℹ️ Some settings will take effect after your next login.")
 
 def main():
-    """Main application entry point"""
+    """Main application entry point - TESTING MODE (NO AUTH)"""
     # Initialize session state
     SessionManager.init_session()
     
@@ -773,22 +772,25 @@ def main():
     # Create API client
     api_client = APIClient(Config.API_URL)
     
-    # Render appropriate page based on authentication state
-    if not SessionManager.is_authenticated():
-        render_login_page(api_client)
-    else:
-        # Get current page from sidebar
-        current_page = render_sidebar()
-        
-        # Render selected page
-        if current_page == "Query":
-            render_query_page(api_client)
-        elif current_page == "Documents":
-            render_documents_page(api_client)
-        elif current_page == "Analytics":
-            render_analytics_page(api_client)
-        elif current_page == "Settings":
-            render_settings_page(api_client)
+    # TESTING MODE: Skip authentication and go directly to document upload
+    st.sidebar.markdown("## 🧪 Testing Mode")
+    st.sidebar.info("Authentication disabled for testing")
+    
+    # Simple page navigation without auth
+    current_page = st.sidebar.selectbox(
+        "📍 Navigate",
+        ["Documents", "Query", "Analytics", "Settings"]
+    )
+    
+    # Render selected page directly
+    if current_page == "Query":
+        render_query_page(api_client)
+    elif current_page == "Documents":
+        render_documents_page(api_client)
+    elif current_page == "Analytics":
+        render_analytics_page(api_client)
+    elif current_page == "Settings":
+        render_settings_page(api_client)
 
 if __name__ == "__main__":
     main() 
