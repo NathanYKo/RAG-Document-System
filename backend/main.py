@@ -36,6 +36,10 @@ from auth import (
 )
 from services import service_registry
 import crud
+from evaluation import (
+    evaluation_service, ab_testing_service, monitoring_service,
+    EvaluationRequest, EvaluationResult, ABTestConfig, PerformanceMetrics
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -564,6 +568,135 @@ async def get_system_stats(
         avg_confidence_score=stats["avg_confidence_score"],
         system_uptime=0.0  # TODO: implement system uptime tracking
     )
+
+# Evaluation & Monitoring Endpoints
+@app.post("/evaluate", response_model=EvaluationResult)
+async def evaluate_response(
+    request: EvaluationRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Evaluate response quality using LLM-as-a-judge"""
+    try:
+        result = await evaluation_service.evaluate_response(request)
+        logger.info(f"Response evaluated by user {current_user.id}: score={result.overall_score}")
+        return result
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Evaluation service temporarily unavailable"
+        )
+
+@app.post("/ab-tests", status_code=status.HTTP_201_CREATED)
+async def create_ab_test(
+    config: ABTestConfig,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Create a new A/B test (admin only)"""
+    success = ab_testing_service.create_ab_test(config)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create A/B test"
+        )
+    
+    logger.info(f"A/B test '{config.test_name}' created by admin {current_user.id}")
+    return {"message": f"A/B test '{config.test_name}' created successfully"}
+
+@app.get("/ab-tests/{test_name}/variant")
+async def get_test_variant(
+    test_name: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get A/B test variant assignment for current user"""
+    variant = ab_testing_service.assign_variant(test_name, current_user.id)
+    return {"test_name": test_name, "variant": variant, "user_id": current_user.id}
+
+@app.post("/ab-tests/{test_name}/results")
+async def record_test_result(
+    test_name: str,
+    outcome_metric: float,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Record A/B test result for current user"""
+    variant = ab_testing_service.assign_variant(test_name, current_user.id)
+    ab_testing_service.record_result(test_name, variant, current_user.id, outcome_metric)
+    return {"message": "Result recorded", "variant": variant}
+
+@app.get("/ab-tests/{test_name}/analysis")
+async def analyze_test_results(
+    test_name: str,
+    current_user: User = Depends(get_current_admin_user)
+):
+    """Analyze A/B test results (admin only)"""
+    analysis = ab_testing_service.analyze_test_results(test_name)
+    return analysis
+
+@app.get("/metrics/performance", response_model=PerformanceMetrics)
+async def get_performance_metrics(
+    days: int = 7,
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_database)
+):
+    """Get comprehensive performance metrics (admin only)"""
+    metrics = monitoring_service.get_performance_metrics(db, days)
+    return metrics
+
+@app.get("/metrics/dashboard")
+async def get_dashboard_data(
+    days: int = 7,
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_database)
+):
+    """Get dashboard data for monitoring UI (admin only)"""
+    try:
+        # Get performance metrics
+        performance = monitoring_service.get_performance_metrics(db, days)
+        
+        # Get query statistics
+        recent_queries = db.query(QueryLog).filter(
+            QueryLog.created_at >= datetime.utcnow() - timedelta(days=days)
+        ).all()
+        
+        # Get feedback statistics
+        feedback_data = db.query(Feedback).join(QueryLog).filter(
+            QueryLog.created_at >= datetime.utcnow() - timedelta(days=days)
+        ).all()
+        
+        # Calculate additional metrics
+        query_volume_by_day = {}
+        error_count = 0
+        
+        for query in recent_queries:
+            day = query.created_at.date().isoformat()
+            query_volume_by_day[day] = query_volume_by_day.get(day, 0) + 1
+            if query.status != "completed":
+                error_count += 1
+        
+        feedback_distribution = {
+            1: sum(1 for f in feedback_data if f.rating == 1),
+            2: sum(1 for f in feedback_data if f.rating == 2),
+            3: sum(1 for f in feedback_data if f.rating == 3),
+            4: sum(1 for f in feedback_data if f.rating == 4),
+            5: sum(1 for f in feedback_data if f.rating == 5),
+        }
+        
+        return {
+            "performance_metrics": performance.dict(),
+            "query_volume_by_day": query_volume_by_day,
+            "error_count": error_count,
+            "feedback_distribution": feedback_distribution,
+            "recent_queries_count": len(recent_queries),
+            "recent_feedback_count": len(feedback_data),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Dashboard data retrieval failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve dashboard data"
+        )
 
 if __name__ == "__main__":
     import uvicorn
