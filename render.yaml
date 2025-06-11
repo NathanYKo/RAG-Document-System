@@ -1,0 +1,39 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: enterprise-rag-db
+    env: docker
+    plan: free
+    databases:
+      - name: enterprise_rag
+        user: rag_user
+
+  # Backend + Frontend Web Service
+  - type: web
+    name: enterprise-rag-system
+    env: docker
+    plan: free
+    buildCommand: ""
+    startCommand: "/app/start-services.sh"
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: enterprise-rag-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ALLOWED_HOSTS
+        value: localhost,127.0.0.1,0.0.0.0,*.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://*.onrender.com,http://localhost:3000,http://localhost:8000
+      - key: PORT
+        value: 10000  # Render uses port 10000
+      - key: STREAMLIT_PORT
+        value: 8501 
