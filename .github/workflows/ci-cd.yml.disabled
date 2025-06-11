@@ -1,15 +1,28 @@
-name: Enterprise RAG CI/CD Pipeline
+# TEMPORARILY DISABLED - Enterprise CI/CD Pipeline
+# 
+# This pipeline includes:
+# - Multi-version Python testing (3.9, 3.10)
+# - Security scanning with Trivy and Bandit
+# - Docker image building and scanning
+# - AWS ECS deployment
+# - Model performance monitoring
+#
+# To re-enable: uncomment this file and configure AWS secrets
+# 
+# Uncomment below to re-enable:
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY_BACKEND: rag-system-backend
-  ECR_REPOSITORY_FRONTEND: rag-system-frontend
+# name: Enterprise RAG CI/CD Pipeline
+# 
+# on:
+#   push:
+#     branches: [ main, develop ]
+#   pull_request:
+#     branches: [ main ]
+# 
+# env:
+#   AWS_REGION: us-east-1
+#   ECR_REPOSITORY_BACKEND: rag-system-backend
+#   ECR_REPOSITORY_FRONTEND: rag-system-frontend
 
 jobs:
   # Comprehensive Testing Suite

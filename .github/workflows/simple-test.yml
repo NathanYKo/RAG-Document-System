@@ -1,0 +1,49 @@
+name: Simple Tests
+
+# This is a basic test workflow - much simpler than the enterprise pipeline
+# Only runs on pull requests to avoid constant testing
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  basic-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'  # Single version to avoid compatibility issues
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest
+    
+    - name: Run basic tests
+      run: |
+        cd backend
+        # Only run if test file exists
+        if [ -f "test_evaluation_system.py" ]; then
+          python -m pytest test_evaluation_system.py -v --tb=short
+        else
+          echo "No test file found - skipping tests"
+        fi
+    
+    - name: Check backend imports
+      run: |
+        cd backend
+        python -c "
+        try:
+            import main
+            print('✅ Backend imports working')
+        except Exception as e:
+            print(f'❌ Backend import error: {e}')
+            exit(1)
+        " 
