@@ -1,215 +1,151 @@
 # Enterprise Document Intelligence System with RAG
 
-A comprehensive enterprise-grade document intelligence system that combines document processing, vector search, retrieval-augmented generation (RAG), and advanced monitoring capabilities. Built with FastAPI, Streamlit, and modern AI technologies.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+**Turn your documents into a searchable, intelligent knowledge base.**
 
-### Core Capabilities
-- Multi-format Document Processing: PDF, DOCX, TXT with intelligent chunking
-- Advanced Vector Search: ChromaDB with sentence transformers for semantic search  
-- RAG-powered Q&A: OpenAI GPT integration for intelligent document querying
-- User Management: JWT-based authentication with role-based access control
-- Real-time Monitoring: Performance metrics, system health, and user analytics
+This project provides a powerful, enterprise-grade system for asking questions about your private documents in natural language and receiving accurate, context-aware answers. It uses a Retrieval-Augmented Generation (RAG) pipeline to combine the power of Large Language Models with your own data.
 
-### Enterprise Features  
-- A/B Testing Framework: Statistically rigorous experimentation platform
-- Response Evaluation: LLM-as-a-judge quality scoring with confidence intervals
-- Performance Monitoring: ML-specific metrics and alerting
-- Interactive Dashboard: Real-time monitoring with Streamlit and Plotly
-- Container Deployment: Docker and Docker Compose support
-- Production Ready: Prometheus monitoring, logging, and error handling
+---
 
-## Quick Start
+### **Table of Contents**
+
+- [Live Demo](#live-demo)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
+- [System Architecture](#system-architecture)
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+- [API Endpoints](#api-endpoints)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Key Features
+
+-   **Multi-format Document Processing**: Ingest PDFs, DOCX, and TXT files.
+-   **Advanced Vector Search**: High-quality semantic search with ChromaDB.
+-   **RAG-powered Q&A**: Integrates with OpenAI's GPT models for intelligent answers.
+-   **User Management**: Secure, token-based authentication (JWT) with RBAC.
+-   **Real-time Monitoring**: Dashboards for system health, performance, and analytics.
+-   **A/B Testing Framework**: Experiment with different models and prompts.
+-   **Response Evaluation**: LLM-as-a-judge for scoring response quality.
+-   **Containerized Deployment**: Easy deployment with Docker and Docker Compose.
+
+## Technology Stack
+
+-   **Backend**: FastAPI, Python 3.9+
+-   **Frontend**: Streamlit
+-   **Database**: SQLite / PostgreSQL
+-   **Vector Store**: ChromaDB
+-   **Embeddings**: Sentence Transformers
+-   **LLM**: OpenAI GPT-4
+-   **Deployment**: Docker, Docker Compose
+-   **Monitoring**: Prometheus, Grafana
+
+## System Architecture
+
+```mermaid
+graph TD
+    subgraph User Interface
+        A[Streamlit Frontend]
+    end
+
+    subgraph API Layer
+        B[FastAPI Backend]
+    end
+
+    subgraph Core Services
+        C[Document Processor]
+        D[Vector Database - ChromaDB]
+        E[RAG Pipeline]
+        F[Authentication Service]
+    end
+
+    subgraph AI Models
+        G[OpenAI GPT-4]
+        H[Sentence Transformers]
+    end
+
+    subgraph Monitoring & Evaluation
+        I[Prometheus]
+        J[Grafana/Streamlit Dashboard]
+        K[Evaluation Service]
+    end
+
+    A -- HTTP Requests --> B
+    B -- Calls --> C
+    B -- Calls --> E
+    B -- Calls --> F
+    C -- Stores Chunks --> D
+    E -- Retrieves Chunks --> D
+    E -- Sends Context to --> G
+    C -- Uses --> H
+    B -- Sends Metrics to --> I
+    J -- Queries --> I
+    B -- Calls --> K
+```
+
+## Getting Started
 
 ### Prerequisites
 
-- Python 3.9+
-- Docker and Docker Compose (optional)
-- OpenAI API key
+-   Python 3.9+
+-   Docker & Docker Compose
+-   OpenAI API Key
 
-### Installation
+### Quick Start
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd Enterprise-Document-Intelligence-System-with-RAG
+1.  **Clone the repo:**
+    ```bash
+    git clone https://github.com/your-username/your-repo.git && cd your-repo
+    ```
+2.  **Set up your environment file:**
+    ```bash
+    cp backend/.env.example backend/.env
+    # Add your OpenAI API key to backend/.env
+    ```
+3.  **Run with Docker Compose:**
+    ```bash
+    docker-compose up -d --build
+    ```
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+### Access the Application
 
-# Install dependencies
-pip install -r backend/requirements.txt
-```
-
-### Configuration
-
-Create a `.env` file with your configuration:
-
-```bash
-OPENAI_API_KEY="your_openai_api_key_here"
-DATABASE_URL="sqlite:///./enterprise_rag.db"
-JWT_SECRET_KEY="your_secret_key_here"
-```
-
-### Setup Database
-
-```bash
-cd backend
-python init_db.py
-```
-
-### Run the Application
-
-**Development Mode:**
-```bash
-# Terminal 1: Backend API
-cd backend
-uvicorn main:app --reload --port 8000
-
-# Terminal 2: Frontend
-cd frontend
-streamlit run app.py --server.port 8501
-
-# Terminal 3: Monitoring Dashboard
-streamlit run monitoring/dashboard/dashboard.py --server.port 8502
-```
-
-**Docker Compose:**
-```bash
-docker-compose up -d
-```
-
-### Access Points
-
-- API Documentation: http://localhost:8000/docs
-- Frontend Interface: http://localhost:8501  
-- Monitoring Dashboard: http://localhost:8502
-- Health Check: http://localhost:8000/health
+-   **Frontend**: `http://localhost:8501`
+-   **API Docs**: `http://localhost:8000/docs`
 
 ## Usage
 
-### Upload Documents
+Once the application is running, you can:
 
-Upload documents through the web interface at http://localhost:8501 or via API:
-
-```python
-import requests
-
-files = {'file': open('document.pdf', 'rb')}
-response = requests.post(
-    'http://localhost:8000/documents/upload',
-    files=files,
-    headers={'Authorization': 'Bearer YOUR_TOKEN'}
-)
-```
-
-### Query Documents
-
-```python
-query_data = {
-    "query": "What is the main topic of the documents?",
-    "max_results": 5
-}
-response = requests.post(
-    'http://localhost:8000/query',
-    json=query_data,
-    headers={'Authorization': 'Bearer YOUR_TOKEN'}
-)
-```
+1.  **Register and log in** through the Streamlit interface.
+2.  **Upload documents** via the "Upload" page.
+3.  **Ask questions** on the "Q&A" page and get answers from your documents.
 
 ## API Endpoints
 
-### Authentication
-- `POST /auth/register` - Register new user
-- `POST /auth/token` - Login and get JWT token
-
-### Document Management
-- `POST /documents/upload` - Upload and process documents
-- `GET /documents` - List user's documents  
-- `GET /documents/{id}` - Get document details
-- `DELETE /documents/{id}` - Delete document
-
-### Query & RAG
-- `POST /query` - Query document knowledge base
-- `GET /queries` - Get query history
-
-### Evaluation & Monitoring
-- `POST /evaluate` - Evaluate response quality
-- `POST /ab-tests` - Create A/B test (admin)
-- `GET /metrics/performance` - System performance metrics
-
-### System Health
-- `GET /health` - System health check
-
-## Deployment
-
-### Docker Deployment
-
-```bash
-# Basic deployment
-docker-compose up -d
-
-# With monitoring
-docker-compose -f docker-compose.monitoring.yml up -d
-```
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key | Required |
-| `DATABASE_URL` | Database connection string | `sqlite:///./enterprise_rag.db` |
-| `JWT_SECRET_KEY` | JWT signing key | Required |
-| `LOG_LEVEL` | Logging level | `INFO` |
+For a full list of API endpoints, please refer to the **Swagger documentation** available at `http://localhost:8000/docs`.
 
 ## Project Structure
 
 ```
-├── backend/                    # FastAPI backend
-│   ├── main.py                # Main API application
-│   ├── evaluation.py          # Evaluation & monitoring services
-│   ├── models.py              # Database models
-│   ├── auth.py                # Authentication logic
-│   └── rag.py                 # RAG implementation
-├── frontend/                   # Streamlit frontend
-│   └── app.py                 # Main frontend application
-├── monitoring/                 # Monitoring & dashboard
-│   └── dashboard/
-│       └── dashboard.py       # Real-time monitoring dashboard
-├── docker-compose.yml          # Docker compose configuration
-└── requirements.txt            # Dependencies
+.
+├── backend/         # FastAPI application
+├── frontend/        # Streamlit application
+├── monitoring/      # Monitoring configuration
+├── .github/         # GitHub Actions workflows
+├── docker-compose.yml
+├── Dockerfile
+└── README.md
 ```
 
-## Testing
+## Contributing
 
-```bash
-# Run backend tests
-cd backend
-pytest test_evaluation_system.py -v
-
-# Run integration tests
-pytest test_backend.py -v
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**OpenAI API Errors:**
-- Verify your API key is set correctly
-- Check API key validity at https://platform.openai.com/api-keys
-
-**Database Connection Issues:**
-```bash
-cd backend && python init_db.py
-```
-
-**Docker Issues:**
-```bash
-docker-compose down && docker-compose up --build
-```
+Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the **MIT License**.

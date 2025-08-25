@@ -1,10 +1,10 @@
-import os
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from dotenv import load_dotenv
 import logging
+import os
+
+from dotenv import load_dotenv
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 # Load environment variables
 load_dotenv()
@@ -12,10 +12,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Database URL configuration with fallback to SQLite for development
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "sqlite:///./enterprise_rag.db"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./enterprise_rag.db")
 
 # Configure engine based on database type
 if DATABASE_URL.startswith("sqlite"):
@@ -24,7 +21,7 @@ if DATABASE_URL.startswith("sqlite"):
         DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-        echo=False  # Set to True for SQL debugging
+        echo=False,  # Set to True for SQL debugging
     )
     logger.info("Using SQLite database for development")
 else:
@@ -35,7 +32,7 @@ else:
         max_overflow=0,
         pool_pre_ping=True,
         pool_recycle=300,
-        echo=False  # Set to True for SQL debugging
+        echo=False,  # Set to True for SQL debugging
     )
     logger.info("Using PostgreSQL database for production")
 
@@ -48,6 +45,7 @@ Base = declarative_base()
 # Metadata for migrations
 metadata = MetaData()
 
+
 def get_database():
     """
     Dependency function to get database session
@@ -57,6 +55,7 @@ def get_database():
         yield db
     finally:
         db.close()
+
 
 def create_tables():
     """
@@ -69,6 +68,7 @@ def create_tables():
         logger.error(f"Error creating database tables: {e}")
         raise
 
+
 def get_db_info():
     """
     Get database connection information
@@ -76,6 +76,6 @@ def get_db_info():
     return {
         "url": DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL,
         "driver": engine.driver,
-        "pool_size": getattr(engine.pool, 'size', lambda: 1)(),
-        "checked_out": getattr(engine.pool, 'checkedout', lambda: 0)()
-    } 
+        "pool_size": getattr(engine.pool, "size", lambda: 1)(),
+        "checked_out": getattr(engine.pool, "checkedout", lambda: 0)(),
+    }
