@@ -1,4 +1,4 @@
-# RAG Query System
+# RAG Document System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -100,7 +100,7 @@ graph TD
 
 1.  **Clone the repo:**
     ```bash
-    git clone https://github.com/nathanko/RAG-Query-System.git && cd RAG-Query-System
+    git clone https://github.com/nathanko/RAG-Document-System.git && cd RAG-Document-System
     ```
 2.  **Set up your environment file:**
     ```bash
