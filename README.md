@@ -1,10 +1,10 @@
-# Enterprise Document Intelligence System with RAG
+# RAG Query System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Turn your documents into a searchable, intelligent knowledge base.**
 
-This project provides a powerful, enterprise-grade system for asking questions about your private documents in natural language and receiving accurate, context-aware answers. It uses a Retrieval-Augmented Generation (RAG) pipeline to combine the power of Large Language Models with your own data.
+This project provides a powerful system for asking questions about your private documents in natural language and receiving accurate, context-aware answers. It uses a Retrieval-Augmented Generation (RAG) pipeline to combine the power of Large Language Models with your own data.
 
 ---
 
@@ -100,7 +100,7 @@ graph TD
 
 1.  **Clone the repo:**
     ```bash
-    git clone https://github.com/your-username/your-repo.git && cd your-repo
+    git clone https://github.com/nathanko/RAG-Query-System.git && cd RAG-Query-System
     ```
 2.  **Set up your environment file:**
     ```bash
